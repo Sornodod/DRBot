@@ -14,6 +14,26 @@ bot = telebot.TeleBot(API_TOKEN)
 # Флаг для остановки потоков
 stop_flag = False
 
+# Словарь праздников {месяц: {день: название}}
+HOLIDAYS = {
+    12: {30: "Новый год"},
+    2: {23: "День защитника Отечества"},
+    3: {8: "Международный женский день"},
+    5: {1: "Праздник Весны и Труда", 9: "День Победы"},
+    6: {12: "День России"},
+    11: {4: "День народного единства"}
+}
+
+def check_holiday():
+    """Проверяет, есть ли сегодня праздник"""
+    today = datetime.now()
+    month = today.month
+    day = today.day
+    
+    if month in HOLIDAYS and day in HOLIDAYS[month]:
+        return HOLIDAYS[month][day]
+    return None
+
 def load_birthdays(file_path):
     df = pd.read_excel(file_path)
     df['Дата рождения'] = pd.to_datetime(df['Дата рождения'], dayfirst=True)
@@ -47,6 +67,14 @@ def check_birthdays(df):
 
 def send_messages(df):
     try:
+        # Проверяем праздник
+        holiday = check_holiday()
+        if holiday:
+            chat_id = 1673134064
+            holiday_message = f"🎊 Сегодня {holiday}! 🎉"
+            bot.send_message(chat_id, holiday_message)
+            print(f"Отправлен праздник: {holiday_message}")
+        
         upcoming_birthdays = check_birthdays(df)
         
         # ID-шник чата
@@ -129,6 +157,11 @@ signal.signal(signal.SIGINT, signal_handler)
 if __name__ == "__main__":
     print("Запуск бота... Нажмите Ctrl+C для остановки.")
     print(f"Сегодня: {datetime.now().strftime('%d.%m.%Y')}")
+    
+    # Проверяем праздник
+    holiday = check_holiday()
+    if holiday:
+        print(f"Сегодня праздник: {holiday}")
     
     birthdays_df = load_birthdays('birthdays.xlsx')
     
