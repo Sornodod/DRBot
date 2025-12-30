@@ -5,6 +5,8 @@ import time
 import threading
 import signal
 import sys
+import os
+import random
 
 API_TOKEN = '7522419708:AAGp0LE1YxJwGMlwINBDwcqoneBsEowAw5Q'
 bot = telebot.TeleBot(API_TOKEN)
@@ -50,6 +52,13 @@ def send_messages(df):
         # ID-шник чата
         chat_id = 1673134064
         
+        # Получаем список картинок
+        picture_folder = "pictureDR"
+        images = []
+        if os.path.exists(picture_folder):
+            images = [f for f in os.listdir(picture_folder) 
+                     if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp'))]
+        
         if not upcoming_birthdays:
             print("На этой неделе дней рождений нет.")
         else:
@@ -57,13 +66,28 @@ def send_messages(df):
             for person, days_info, check_date in upcoming_birthdays:
                 if days_info == "сегодня":
                     message = f"🎉 Поздравляем {person['ФИО']} с днём рождения! 🎂"
+                    
+                    # Отправляем с картинкой если есть
+                    if images:
+                        random_image = random.choice(images)
+                        image_path = os.path.join(picture_folder, random_image)
+                        
+                        try:
+                            with open(image_path, 'rb') as photo:
+                                bot.send_photo(chat_id, photo, caption=message)
+                            print(f"Отправлено с картинкой: {message}")
+                        except Exception as e:
+                            print(f"Ошибка отправки фото: {e}")
+                            bot.send_message(chat_id, message)
+                    else:
+                        bot.send_message(chat_id, message)
+                        print(f"Отправлено: {message}")
                 else:
                     # Форматируем дату для отображения
                     date_str = check_date.strftime('%d.%m')
                     message = f"📅 У {person['ФИО']} день рождения {days_info} ({date_str})"
-                
-                bot.send_message(chat_id, message)
-                print(f"Отправлено: {message}")
+                    bot.send_message(chat_id, message)
+                    print(f"Отправлено: {message}")
                 
     except Exception as e:
         print(f"Ошибка при отправке сообщений: {e}")
@@ -112,6 +136,15 @@ if __name__ == "__main__":
     print("\nДни рождения в файле:")
     for _, row in birthdays_df.iterrows():
         print(f"{row['ФИО']}: {row['Дата рождения'].strftime('%d.%m.%Y')}")
+    
+    # Проверяем наличие папки с картинками
+    picture_folder = "pictureDR"
+    if os.path.exists(picture_folder):
+        images = [f for f in os.listdir(picture_folder) 
+                 if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp'))]
+        print(f"\nНайдено картинок: {len(images)}")
+    else:
+        print("\nПапка pictureDR не найдена")
     
     # Запуск проверки в отдельном потоке
     daily_check_thread = threading.Thread(target=schedule_daily_check, daemon=True)
