@@ -1,0 +1,36 @@
+﻿# Python
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Конфигурация и секреты
+config.py
+.env
+.env.local
+.secrets
+*.token
+token.txt
+
+# Данные
+*.db
+*.sqlite3
+*.xlsx  # Если не хотите коммитить Excel файлы с данными
+
+# Логи
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Системные файлы
+.DS_Store
+Thumbs.db
+
+# Временные файлы
+temp/
+tmp/
