@@ -16,7 +16,7 @@ stop_flag = False
 
 # Словарь праздников {месяц: {день: название}}
 HOLIDAYS = {
-    12: {30: "Новый год"},
+    12: {31: "Новый год"},
     2: {23: "День защитника Отечества"},
     3: {8: "Международный женский день"},
     5: {1: "Праздник Весны и Труда", 9: "День Победы"},
@@ -32,6 +32,32 @@ def check_holiday():
     
     if month in HOLIDAYS and day in HOLIDAYS[month]:
         return HOLIDAYS[month][day]
+    return None
+
+def get_holiday_image(holiday_name):
+    """Ищет картинку для праздника"""
+    picture_folder = "pictureHoliday"
+    if not os.path.exists(picture_folder):
+        return None
+    
+    # Форматируем дату для поиска
+    today = datetime.now()
+    date_str = f"{today.day:02d}.{today.month:02d}"
+    
+    # Ищем по дате (например 08.03.png)
+    for filename in os.listdir(picture_folder):
+        if filename.startswith(date_str) and filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
+            return os.path.join(picture_folder, filename)
+    
+    # Если не нашли по дате, ищем по имени праздника
+    holiday_lower = holiday_name.lower()
+    for filename in os.listdir(picture_folder):
+        filename_lower = filename.lower()
+        if (holiday_lower in filename_lower or 
+            any(word in filename_lower for word in holiday_lower.split())) and \
+           filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
+            return os.path.join(picture_folder, filename)
+    
     return None
 
 def load_birthdays(file_path):
@@ -72,15 +98,28 @@ def send_messages(df):
         if holiday:
             chat_id = 1673134064
             holiday_message = f"🎊 Сегодня {holiday}! 🎉"
-            bot.send_message(chat_id, holiday_message)
-            print(f"Отправлен праздник: {holiday_message}")
+            
+            # Ищем картинку для праздника
+            holiday_image = get_holiday_image(holiday)
+            
+            if holiday_image and os.path.exists(holiday_image):
+                try:
+                    with open(holiday_image, 'rb') as photo:
+                        bot.send_photo(chat_id, photo, caption=holiday_message)
+                    print(f"Отправлен праздник с картинкой: {holiday_message}")
+                except Exception as e:
+                    print(f"Ошибка отправки фото праздника: {e}")
+                    bot.send_message(chat_id, holiday_message)
+            else:
+                bot.send_message(chat_id, holiday_message)
+                print(f"Отправлен праздник: {holiday_message}")
         
         upcoming_birthdays = check_birthdays(df)
         
         # ID-шник чата
         chat_id = 1673134064
         
-        # Получаем список картинок
+        # Получаем список картинок для дней рождений
         picture_folder = "pictureDR"
         images = []
         if os.path.exists(picture_folder):
@@ -162,6 +201,13 @@ if __name__ == "__main__":
     holiday = check_holiday()
     if holiday:
         print(f"Сегодня праздник: {holiday}")
+        
+        # Проверяем есть ли картинка
+        holiday_image = get_holiday_image(holiday)
+        if holiday_image:
+            print(f"Найдена картинка праздника: {os.path.basename(holiday_image)}")
+        else:
+            print("Картинка для праздника не найдена")
     
     birthdays_df = load_birthdays('birthdays.xlsx')
     
@@ -175,9 +221,18 @@ if __name__ == "__main__":
     if os.path.exists(picture_folder):
         images = [f for f in os.listdir(picture_folder) 
                  if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp'))]
-        print(f"\nНайдено картинок: {len(images)}")
+        print(f"\nНайдено картинок для ДР: {len(images)}")
     else:
         print("\nПапка pictureDR не найдена")
+    
+    # Проверяем папку с картинками праздников
+    holiday_folder = "pictureHoliday"
+    if os.path.exists(holiday_folder):
+        holiday_images = [f for f in os.listdir(holiday_folder) 
+                         if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp'))]
+        print(f"Найдено картинок праздников: {len(holiday_images)}")
+        for img in holiday_images:
+            print(f"  - {img}")
     
     # Запуск проверки в отдельном потоке
     daily_check_thread = threading.Thread(target=schedule_daily_check, daemon=True)
