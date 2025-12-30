@@ -8,10 +8,11 @@ import sys
 import os
 import random
 
-API_TOKEN = '7522419708:AAGp0LE1YxJwGMlwINBDwcqoneBsEowAw5Q'
+API_TOKEN = 'ТОКЕН'
 bot = telebot.TeleBot(API_TOKEN)
 
 stop_flag = False
+CHAT_ID = ID_ЧАТА
 
 HOLIDAYS = {
     12: {31: "Новый год"},
@@ -82,7 +83,6 @@ def send_messages(df):
     try:
         holiday = check_holiday()
         if holiday:
-            chat_id = 1673134064
             holiday_message = f"🎊 Сегодня {holiday}! 🎉"
             
             holiday_image = get_holiday_image(holiday)
@@ -90,18 +90,16 @@ def send_messages(df):
             if holiday_image and os.path.exists(holiday_image):
                 try:
                     with open(holiday_image, 'rb') as photo:
-                        bot.send_photo(chat_id, photo, caption=holiday_message)
+                        bot.send_photo(CHAT_ID, photo, caption=holiday_message)
                     print(f"Отправлен праздник с картинкой: {holiday_message}")
                 except Exception as e:
                     print(f"Ошибка отправки фото праздника: {e}")
-                    bot.send_message(chat_id, holiday_message)
+                    bot.send_message(CHAT_ID, holiday_message)
             else:
-                bot.send_message(chat_id, holiday_message)
+                bot.send_message(CHAT_ID, holiday_message)
                 print(f"Отправлен праздник: {holiday_message}")
         
         upcoming_birthdays = check_birthdays(df)
-        
-        chat_id = 1673134064
         
         picture_folder = "pictureDR"
         images = []
@@ -122,18 +120,18 @@ def send_messages(df):
                         
                         try:
                             with open(image_path, 'rb') as photo:
-                                bot.send_photo(chat_id, photo, caption=message)
+                                bot.send_photo(CHAT_ID, photo, caption=message)
                             print(f"Отправлено с картинкой: {message}")
                         except Exception as e:
                             print(f"Ошибка отправки фото: {e}")
-                            bot.send_message(chat_id, message)
+                            bot.send_message(CHAT_ID, message)
                     else:
-                        bot.send_message(chat_id, message)
+                        bot.send_message(CHAT_ID, message)
                         print(f"Отправлено: {message}")
                 else:
                     date_str = check_date.strftime('%d.%m')
                     message = f"📅 У {person['ФИО']} день рождения {days_info} ({date_str})"
-                    bot.send_message(chat_id, message)
+                    bot.send_message(CHAT_ID, message)
                     print(f"Отправлено: {message}")
                 
     except Exception as e:
@@ -145,19 +143,9 @@ def schedule_daily_check():
     
     send_messages(birthdays_df)
     
-    while not stop_flag:
-        try:
-            current_time = datetime.now().time()
-            
-            if current_time.hour == 9 and current_time.minute == 0:
-                send_messages(birthdays_df)
-                time.sleep(61)
-            else:
-                time.sleep(30)
-                
-        except Exception as e:
-            print(f"Ошибка в потоке проверки: {e}")
-            time.sleep(300)
+    # Закрываем окно после отправки
+    time.sleep(5)
+    os._exit(0)
 
 def signal_handler(sig, frame):
     global stop_flag
@@ -169,8 +157,18 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 if __name__ == "__main__":
-    print("Запуск бота... Нажмите Ctrl+C для остановки.")
+    print("Запуск бота...")
     print(f"Сегодня: {datetime.now().strftime('%d.%m.%Y')}")
+    print(f"Используется chat_id: {CHAT_ID}")
+    
+    try:
+        bot.send_message(CHAT_ID, "🤖 Бот запущен! Проверка связи...")
+        print("Проверка связи: ОК")
+    except Exception as e:
+        print(f"Проверка связи: ОШИБКА - {e}")
+        print("Убедитесь, что бот добавлен в чат и является администратором")
+        time.sleep(5)
+        sys.exit(1)
     
     holiday = check_holiday()
     if holiday:
@@ -204,22 +202,10 @@ if __name__ == "__main__":
         for img in holiday_images:
             print(f"  - {img}")
     
+    print("\nОтправка сообщений...")
     daily_check_thread = threading.Thread(target=schedule_daily_check, daemon=True)
     daily_check_thread.start()
     
-    print("\nБот запущен. Проверка дней рождений работает в фоне.")
-    
-    try:
-        while not stop_flag:
-            try:
-                bot.polling(none_stop=True, timeout=10)
-            except Exception as e:
-                if not stop_flag:
-                    print(f"Ошибка polling: {e}")
-                    time.sleep(5)
-                    
-    except KeyboardInterrupt:
-        print("\nОстановка по Ctrl+C...")
-        stop_flag = True
-    finally:
-        print("Бот завершил работу.")
+    print("Окно закроется автоматически через 5 секунд...")
+    time.sleep(10)
+    os._exit(0)
